@@ -87,7 +87,12 @@
         <include refid="user_column"/>
         from app_user where type = 0
     </select>
-    
+
+    <select id="getLastUser" resultType="AppUser">
+        select
+        <include refid="user_column"/>
+        from app_user order by id desc limit 1
+    </select>
 </mapper>
 
 

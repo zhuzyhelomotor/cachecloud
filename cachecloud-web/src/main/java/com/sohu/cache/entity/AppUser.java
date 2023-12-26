@@ -1,5 +1,6 @@
 package com.sohu.cache.entity;
 
+import cn.com.servyou.ec.sdk.entity.Employee;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -89,6 +90,11 @@ public class AppUser implements Serializable {
      */
     @ApiModelProperty(value = "注册时间")
     private Date registerTime;
+
+    /**
+     * 判断是否是从governor过来的，默认是否
+     */
+    private boolean fromGovernor = false;
 
     public static AppUser buildFrom(Long userId, String name, String chName, String email, String mobile, String weChat,
             Integer type) {

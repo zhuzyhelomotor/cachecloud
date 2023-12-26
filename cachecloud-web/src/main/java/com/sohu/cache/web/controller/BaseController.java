@@ -1,5 +1,9 @@
 package com.sohu.cache.web.controller;
 
+import cn.com.servyou.ec.sdk.entity.Employee;
+import cn.com.servyou.yypt.http.dto.ResultDto;
+import cn.com.servyou.yypt.sso.epc.TokenManagerFactory;
+import cn.com.servyou.yypt.sso.epc.dto.EpcToken;
 import com.sohu.cache.async.AsyncService;
 import com.sohu.cache.constant.AppUserTypeEnum;
 import com.sohu.cache.dao.AppAuditDao;
@@ -28,12 +32,14 @@ import com.vladsch.flexmark.parser.ParserEmulationProfile;
 import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.builder.Extension;
 import com.vladsch.flexmark.util.options.MutableDataSet;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.struts.mock.MockHttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +63,9 @@ import java.util.stream.Collectors;
  * @author leifu
  * @Time 2014年10月16日
  */
+@Slf4j
 public class BaseController {
+
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Autowired
@@ -160,7 +168,7 @@ public class BaseController {
     }
 
     protected TimeBetween getTimeBetween(HttpServletRequest request, Model model, String startDateAtr,
-                                         String endDateAtr) throws ParseException {
+            String endDateAtr) throws ParseException {
         String startDateParam = request.getParameter(startDateAtr);
         String endDateParam = request.getParameter(endDateAtr);
         Date startDate;
@@ -189,8 +197,56 @@ public class BaseController {
      * @return
      */
     public AppUser getUserInfo(HttpServletRequest request) {
+        // 使用原逻辑校验
+        AppUser appUser = null;
         String userName = userLoginStatusService.getUserNameFromLoginStatus(request);
-        return userService.getByName(userName);
+        if (StringUtils.isNotEmpty(userName)) {
+            appUser = userService.getByName(userName);
+        }
+        if (appUser == null) {
+            // 从员工账户中心，获取员工
+            try {
+                appUser = getUserFromEmployeeCenter(request);
+            } catch (IOException e) {
+                log.error("从员工账户中心获取用户失败", e);
+            }
+        }
+        return appUser;
+    }
+
+    private AppUser getUserFromEmployeeCenter(HttpServletRequest req) throws IOException {
+        EpcToken epcToken = TokenManagerFactory.create().getAllToken(req);
+        ResultDto<Employee> result = null;
+        if (!StringUtils.isEmpty(epcToken.getSpecialToken())) {
+            result = TokenManagerFactory.create().check(epcToken.getSpecialToken(), req, new MockHttpServletResponse());
+        }
+        if (result == null) {
+            result = TokenManagerFactory.create().check(epcToken.getToken(), req, new MockHttpServletResponse());
+        }
+        if (result != null && result.getData() != null) {
+            // 判断该用户是否已存在
+            AppUser appUser = userService.getByName(result.getData().getUserId());
+            if (appUser == null) {
+                // 不存在添加新用户到app_user表
+                List<AppUser> lastUser = userService.getLastUser();
+                Long id = 1L;
+                if (CollectionUtils.isNotEmpty(lastUser)) {
+                    id = lastUser.get(0).getId() + 1;
+                }
+                appUser = new AppUser();
+                appUser.setName(result.getData().getUserId());
+                appUser.setChName(result.getData().getFullName());
+                appUser.setEmail(result.getData().getEmail());
+                appUser.setMobile(result.getData().getMobile());
+                appUser.setWeChat(result.getData().getMobile());
+                appUser.setType(2);
+                appUser.setIsAlert(1);
+                appUser.setId(id);
+                userService.save(appUser);
+            }
+            return appUser;
+        }
+        return null;
     }
 
 
@@ -284,7 +340,6 @@ public class BaseController {
         model.addAttribute("instanceList", instanceList);
         Map<Integer, List<InstanceInfo>> instanceListMap = instanceGroupByMaster(instanceList);
         model.addAttribute("instanceListMap", instanceListMap);
-
 
         // 实例Map
         Map<Integer, InstanceInfo> instanceInfoMap = new HashMap<Integer, InstanceInfo>();

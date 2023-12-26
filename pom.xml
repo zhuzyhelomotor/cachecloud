@@ -50,6 +50,7 @@
         <springfox-swagger2.version>2.9.2</springfox-swagger2.version>
         <swagger-ui.version>2.9.2</swagger-ui.version>
         <apache.ant.version>1.10.11</apache.ant.version>
+        <yypt.sso.core>20210527-SNAPSHOT</yypt.sso.core>
     </properties>
 
     <dependencyManagement>
@@ -226,7 +227,17 @@
                 <artifactId>ant</artifactId>
                 <version>${apache.ant.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>cn.com.servyou.yypt</groupId>
+                <artifactId>yypt-sso-core</artifactId>
+                <version>${yypt.sso.core}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>cn.com.servyou.yypt</groupId>
+                        <artifactId>yypt-http</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

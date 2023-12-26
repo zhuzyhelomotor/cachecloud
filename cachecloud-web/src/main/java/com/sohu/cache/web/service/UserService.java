@@ -33,6 +33,11 @@ public interface UserService {
     List<AppUser> getAllUser();
 
     /**
+     * 获取最新一个用户
+     */
+    List<AppUser> getLastUser();
+
+    /**
      * 获取某个应用下的所有用户
      * @param appId
      * @return

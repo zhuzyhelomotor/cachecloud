@@ -66,6 +66,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<AppUser> getLastUser() {
+        return appUserDao.getLastUser();
+    }
+
+    @Override
     public List<AppUser> getByAppId(Long appId) {
         if (appId == null || appId < 0) {
             return Collections.emptyList();
